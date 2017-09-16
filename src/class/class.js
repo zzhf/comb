@@ -43,58 +43,62 @@
             if (this._initHooks) {
                 this.callInitHooks();
             }
+        };
+
+        //寄生组合式继承
+        var F = function() {};
+        F.prototype = this.prototype;
+
+        var proto = new F();
+        //显式指定构造函数
+        proto.constructor = NewClass;
+
+        NewClass.prototype = proto;
+        //复制L.Class基类方法复制至NewClass
+        for (var item in this) {
+            if (this.hasOwnProperty(item)) {
+                NewClass[i] = this[i];
+            }
         }
+        //新增静态属性
+        if (props.statics) {
+            L.extend(NewClass, props.statics);
+            delete props.statics;
+        }
+
+        if (props.includes) {
+            L.Util.extend.apply(null, [proto].concat(props.includes)); //need to be tested;
+            delete props.includes;
+        }
+        //扩充options
+        if (props.options && proto.options) {
+            props.options = L.extend({}, proto.options, props.options);
+        }
+
+        //扩充子类静态属性
+        L.extend(proto, props);
+
+        proto._initHooks = [];
+
+        var parent = this;
+        NewClass.__super__ = parent.prototype;
+        
+        proto.callInitHooks = function() {
+
+            if (this._initHooksCalled) {return};
+
+            if (parent.prototype.callInitHooks) {
+                parent.prototype.callInitHooks.call(this);
+            }
+
+            this._initHooksCalled = true;
+
+            for (var i = proto.length - 1; i >= 0; i--) {
+                proto._initHooks[i].call(this);
+            }
+        };
+
+        return NewClass;
     };
-
-    var F = function() {};
-    F.prototype = this.prototype;
-
-    var proto = new F();
-    proto.constructor = NewClass;
-
-    NewClass.prototype = proto;
-
-    for (var item in this) {
-        if (this.hasOwnProperty(item)) {
-            NewClass[i] = this[i];
-        }
-    }
-
-    if (props.statics) {
-        L.extend(NewClass, props.statics);
-        delete props.statics;
-    }
-
-    if (props.includes) {
-        L.Util.extend.apply(null, [proto].concat(props.includes)); //need to be tested;
-        delete props.includes;
-    }
-
-    if (props.options && proto.options) {
-        props.options = L.extend({}, proto.options, props.options);
-    }
-
-    L.extend(proto, props);
-
-    proto._initHooks = [];
-
-    var parent = this;
-    NewClass.__super__ = parent.prototype;
-
-    proto.callInitHooks = function() {
-
-        if (this._initHooksCalled) {return};
-
-        if (parent.prototype.callInitHooks) {
-            parent.prototype.callInitHooks.call(this);
-        }
-
-        this._initHooksCalled = true;
-
-        for (var i = proto.length - 1; i >= 0; i--) {
-            proto._initHooks[i].call(this);
-        }
-    };
-
-    return NewClass;
+    
 }())
